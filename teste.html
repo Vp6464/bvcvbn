@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CPMA - Controle Motorista</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; background: #f0f4f8; }
+  h1, h2 { text-align: center; }
+  label {
+    display: block; margin-top: 10px; font-weight: bold; text-align: center;
+    width: 300px; margin-left: auto; margin-right: auto;
+  }
+  input, select, button {
+    padding: 7px; margin-top: 4px; width: 100%; box-sizing: border-box;
+    border-radius: 4px; border: 1px solid #bbb;
+  }
+  button { background: #007acc; color: white; border: none; cursor: pointer; margin-top: 10px; }
+  button:hover { background: #005f99; }
+  .section {
+    background: white; padding: 15px 20px; margin-bottom: 20px;
+    border-radius: 8px; box-shadow: 0 3px 8px rgb(0 0 0 / 0.1);
+  }
+  .list-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #ddd; }
+  .list-item button { background: red; margin-left: 5px; padding: 4px 8px; font-size: 12px; }
+  .totals { font-weight: bold; margin-top: 10px; text-align: right; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
+  th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+  th { background: #007acc; color: white; }
+  @media (max-width: 600px) {
+    .list-item { flex-direction: column; align-items: flex-start; }
+    .list-item button { margin: 4px 0 0 0; }
+    table { font-size: 14px; }
+  }
+  @media (min-width: 768px) {
+    input, select { width: 300px; margin-left: auto; margin-right: auto; display: block; }
+    button { width: 160px; margin-left: auto; margin-right: auto; display: block; }
+    .section { width: 60%; margin-left: auto; margin-right: auto; }
+  }
+</style>
+</head>
+<body>
+
+<h1>CPMA - Controle Motorista</h1>
+
+<!-- Dados do dia -->
+<div class="section">
+  <h2>Dados do Dia</h2>
+  <label>Data</label>
+  <input type="date" id="workDate" />
+  <label>Horas Trabalhadas</label>
+  <input type="number" id="hoursWorked" min="0" step="0.1" />
+  <label>Quilômetros Rodados</label>
+  <input type="number" id="kmDriven" min="0" step="0.1" />
+</div>
+
+<!-- Ganhos -->
+<div class="section">
+  <h2>Ganhos do Dia</h2>
+  <div id="earningsList"></div>
+  <div class="totals" id="earningsTotal">Total ganhos: R$ 0,00</div>
+  <label>Valor (R$)</label>
+  <input type="number" id="earningValue" min="0" step="0.01" />
+  <label>Aplicativo</label>
+  <select id="earningApp">
+    <option value="">Selecione</option>
+    <option value="Uber">Uber</option>
+    <option value="99">99</option>
+    <option value="Outro">Outro</option>
+  </select>
+  <button onclick="addEarning()">Adicionar Ganho</button>
+</div>
+
+<!-- Despesas -->
+<div class="section">
+  <h2>Despesas do Dia</h2>
+  <div id="expensesList"></div>
+  <div class="totals" id="expensesTotal">Total despesas: R$ 0,00</div>
+  <label>Valor (R$)</label>
+  <input type="number" id="expenseValue" min="0" step="0.01" />
+  <label>Descrição</label>
+  <input type="text" id="expenseDesc" />
+  <button onclick="addExpense()">Adicionar Despesa</button>
+</div>
+
+<!-- Despesas Fixas -->
+<div class="section">
+  <h2>Despesas Fixas</h2>
+  <div id="fixedExpensesList"></div>
+  <label>Valor (R$)</label>
+  <input type="number" id="fixedExpenseValue" min="0" step="0.01" />
+  <label>Descrição</label>
+  <input type="text" id="fixedExpenseDesc" />
+  <label>Frequência</label>
+  <select id="fixedExpenseFreq">
+    <option value="semanal">Semanal</option>
+    <option value="mensal">Mensal</option>
+    <option value="anual">Anual</option>
+  </select>
+  <button onclick="addFixedExpense()">Adicionar Despesa Fixa</button>
+</div>
+
+<!-- Despesas Pontuais -->
+<div class="section">
+  <h2>Despesas Pontuais (Mensal/Anual)</h2>
+  <div id="extraExpensesList"></div>
+  <label>Valor (R$)</label>
+  <input type="number" id="extraExpenseValue" min="0" step="0.01" />
+  <label>Descrição</label>
+  <input type="text" id="extraExpenseDesc" />
+  <label>Tipo</label>
+  <select id="extraExpenseType">
+    <option value="mensal">Mensal</option>
+    <option value="anual">Anual</option>
+  </select>
+  <button onclick="addExtraExpense()">Adicionar Despesa Pontual</button>
+</div>
+
+<!-- Resumos -->
+<div class="section">
+  <h2>Resumos</h2>
+  <button onclick="showDailySummary()">Resumo Diário</button>
+  <button onclick="showWeeklySummary()">Resumo Semanal</button>
+  <br /><br />
+  <label>Escolher Mês</label>
+  <input type="month" id="monthPicker" />
+  <button onclick="showMonthlySummary()">Resumo Mensal</button>
+  <div id="summaryResult" style="margin-top: 15px; font-weight: bold;"></div>
+</div>
+
+<script>
+// ----- Seletores dos elementos -----
+const workDate = document.getElementById('workDate');
+const hoursWorked = document.getElementById('hoursWorked');
+const kmDriven = document.getElementById('kmDriven');
+
+const earningValue = document.getElementById('earningValue');
+const earningApp = document.getElementById('earningApp');
+const earningsList = document.getElementById('earningsList');
+const earningsTotal = document.getElementById('earningsTotal');
+
+const expenseValue = document.getElementById('expenseValue');
+const expenseDesc = document.getElementById('expenseDesc');
+const expensesList = document.getElementById('expensesList');
+const expensesTotal = document.getElementById('expensesTotal');
+
+const fixedExpenseValue = document.getElementById('fixedExpenseValue');
+const fixedExpenseDesc = document.getElementById('fixedExpenseDesc');
+const fixedExpenseFreq = document.getElementById('fixedExpenseFreq');
+const fixedExpensesList = document.getElementById('fixedExpensesList');
+
+const extraExpenseValue = document.getElementById('extraExpenseValue');
+const extraExpenseDesc = document.getElementById('extraExpenseDesc');
+const extraExpenseType = document.getElementById('extraExpenseType');
+const extraExpensesList = document.getElementById('extraExpensesList');
+
+const summaryResult = document.getElementById('summaryResult');
+const monthPicker = document.getElementById('monthPicker');
+
+// ----- Dados -----
+let dayData = { ganhos: [], despesas: [], horas: 0, km: 0 };
+let fixedExpenses = JSON.parse(localStorage.getItem('cpma_fixed') || '[]');
+let extraExpenses = JSON.parse(localStorage.getItem('cpma_extra') || '[]');
+
+// ----- Funções principais (CRUD) -----
+function saveDayData() {
+  const date = workDate.value;
+  if (date) {
+    dayData.horas = parseFloat(hoursWorked.value) || 0;
+    dayData.km = parseFloat(kmDriven.value) || 0;
+    localStorage.setItem('cpma_' + date, JSON.stringify(dayData));
+  }
+}
+function loadDayData(date) {
+  const saved = localStorage.getItem('cpma_' + date);
+  dayData = saved ? JSON.parse(saved) : { ganhos: [], despesas: [], horas: 0, km: 0 };
+  hoursWorked.value = dayData.horas || '';
+  kmDriven.value = dayData.km || '';
+  renderLists();
+}
+
+function renderLists() {
+  renderArray(earningsList, dayData.ganhos, false, 'ganhos');
+  renderArray(expensesList, dayData.despesas, true, 'despesas');
+  renderArray(fixedExpensesList, fixedExpenses, true, 'fixas');
+  renderArray(extraExpensesList, extraExpenses, true, 'pontuais');
+  updateTotals();
+}
+function renderArray(container, arr, isExpense, type) {
+  container.innerHTML = '';
+  arr.forEach((item, i) => {
+    const div = document.createElement('div');
+    div.className = 'list-item';
+    div.innerHTML = `<span>${item.desc || item.app} - R$ ${item.valor.toFixed(2)} ${item.freq || item.tipo || ''}</span>
+      <span>
+        <button onclick="editItem('${type}',${i})">Editar</button>
+        <button onclick="deleteItem('${type}',${i})">Excluir</button>
+      </span>`;
+    container.appendChild(div);
+  });
+}
+function updateTotals() {
+  const tg = dayData.ganhos.reduce((a, b) => a + b.valor, 0);
+  const td = dayData.despesas.reduce((a, b) => a + b.valor, 0);
+  earningsTotal.innerText = `Total ganhos: R$ ${tg.toFixed(2)}`;
+  expensesTotal.innerText = `Total despesas: R$ ${td.toFixed(2)}`;
+}
+
+// ----- Adição de dados -----
+function addEarning() {
+  const val = parseFloat(earningValue.value),
+    app = earningApp.value;
+  if (isNaN(val) || !app) return alert('Preencha ganho e app');
+  dayData.ganhos.push({ valor: val, app });
+  earningValue.value = '';
+  earningApp.value = '';
+  renderLists();
+  saveDayData();
+}
+function addExpense() {
+  const val = parseFloat(expenseValue.value),
+    desc = expenseDesc.value.trim();
+  if (isNaN(val) || !desc) return alert('Preencha despesa e descrição');
+  dayData.despesas.push({ valor: val, desc });
+  expenseValue.value = '';
+  expenseDesc.value = '';
+  renderLists();
+  saveDayData();
+}
+function addFixedExpense() {
+  const val = parseFloat(fixedExpenseValue.value),
+    desc = fixedExpenseDesc.value.trim(),
+    freq = fixedExpenseFreq.value;
+  if (isNaN(val) || !desc) return alert('Preencha despesa fixa');
+  fixedExpenses.push({ valor: val, desc, freq });
+  localStorage.setItem('cpma_fixed', JSON.stringify(fixedExpenses));
+  fixedExpenseValue.value = '';
+  fixedExpenseDesc.value = '';
+  renderLists();
+}
+function addExtraExpense() {
+  const val = parseFloat(extraExpenseValue.value),
+    desc = extraExpenseDesc.value.trim(),
+    tipo = extraExpenseType.value;
+  if (isNaN(val) || !desc) return alert('Preencha despesa pontual');
+  extraExpenses.push({ valor: val, desc, tipo });
+  localStorage.setItem('cpma_extra', JSON.stringify(extraExpenses));
+  extraExpenseValue.value = '';
+  extraExpenseDesc.value = '';
+  renderLists();
+}
+
+// ----- Editar / Excluir -----
+function editItem(type, i) {
+  let arr;
+  if (type === 'ganhos') arr = dayData.ganhos;
+  else if (type === 'despesas') arr = dayData.despesas;
+  else if (type === 'fixas') arr = fixedExpenses;
+  else arr = extraExpenses;
+  const item = arr[i];
+  const nv = parseFloat(prompt('Novo valor:', item.valor));
+  if (!isNaN(nv)) item.valor = nv;
+  const nd = prompt('Nova descrição:', item.desc || item.app);
+  if (nd) {
+    item.desc = nd;
+    item.app = nd;
+  }
+  saveAll(type);
+  renderLists();
+}
+function deleteItem(type, i) {
+  if (type === 'ganhos') dayData.ganhos.splice(i, 1);
+  else if (type === 'despesas') dayData.despesas.splice(i, 1);
+  else if (type === 'fixas') fixedExpenses.splice(i, 1);
+  else extraExpenses.splice(i, 1);
+  saveAll(type);
+  renderLists();
+}
+function saveAll(type) {
+  if (type === 'ganhos' || type === 'despesas') saveDayData();
+  else if (type === 'fixas') localStorage.setItem('cpma_fixed', JSON.stringify(fixedExpenses));
+  else localStorage.setItem('cpma_extra', JSON.stringify(extraExpenses));
+}
+
+// ----- Resumos -----
+function showDailySummary() {
+  const g = dayData.ganhos.reduce((a, b) => a + b.valor, 0);
+  const d = dayData.despesas.reduce((a, b) => a + b.valor, 0);
+  summaryResult.innerHTML = `
+    <strong>Resumo Diário</strong><br>
+    Horas: ${dayData.horas} | KM: ${dayData.km}<br>
+    Ganhos: R$ ${g.toFixed(2)}<br>
+    Despesas: R$ ${d.toFixed(2)}<br>
+    Receita Líquida: R$ ${(g - d).toFixed(2)}
+  `;
+}
+function showWeeklySummary() {
+  const selectedDate = new Date(workDate.value || new Date());
+  const dayOfWeek = selectedDate.getDay();
+  const monday = new Date(selectedDate);
+  monday.setDate(selectedDate.getDate() - ((dayOfWeek + 6) % 7));
+
+  let totalGanhos = 0,
+    totalDespesas = 0,
+    rows = '';
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const key = 'cpma_' + d.toISOString().slice(0, 10);
+    const saved = JSON.parse(localStorage.getItem(key) || 'null');
+    const g = saved ? saved.ganhos.reduce((a, b) => a + b.valor, 0) : 0;
+    const e = saved ? saved.despesas.reduce((a, b) => a + b.valor, 0) : 0;
+    totalGanhos += g;
+    totalDespesas += e;
+    const rowColor = g > 0 ? 'style="background:#c8f7c5;"' : 'style="background:#f7c5c5;"';
+    rows += `<tr ${rowColor}><td>${d.toLocaleDateString()}</td><td>R$ ${g.toFixed(2)}</td><td>R$ ${e.toFixed(2)}</td><td>R$ ${(g - e).toFixed(2)}</td></tr>`;
+  } 
+
+  let fixedTotal = 0,
+    extraTotal = 0;
+  fixedExpenses.forEach((f) => {
+    if (f.freq === 'semanal') fixedTotal += f.valor;
+    else if (f.freq === 'mensal') fixedTotal += f.valor / 4;
+    else if (f.freq === 'anual') fixedTotal += f.valor / 52;
+  });
+  extraExpenses.forEach((e) => {
+    if (e.tipo === 'mensal') extraTotal += e.valor / 4;
+    else if (e.tipo === 'anual') extraTotal += e.valor / 52;
+  });
+
+  const totalDespesasComFixas = totalDespesas + fixedTotal + extraTotal;
+  summaryResult.innerHTML = `<strong>Resumo Semanal (${monday.toLocaleDateString()} a ${new Date(
+    monday.getFullYear(),
+    monday.getMonth(),
+    monday.getDate() + 6
+  ).toLocaleDateString()})</strong>
+    <table>
+      <tr><th>Data</th><th>Ganhos</th><th>Despesas</th><th>Receita</th></tr>${rows}</table>
+    <div class="totals">
+      Total Ganhos: R$ ${totalGanhos.toFixed(2)} |
+      Total Despesas: R$ ${totalDespesasComFixas.toFixed(2)} |
+      Receita Líquida: R$ ${(totalGanhos - totalDespesasComFixas).toFixed(2)}
+    </div>`;
+}
+function showMonthlySummary() {
+  const monthValue = monthPicker.value || workDate.value.slice(0, 7);
+  if (!monthValue) return;
+  const [year, month] = monthValue.split('-').map(Number);
+
+  let totalGanhos = 0,
+    totalDespesas = 0,
+    rows = '';
+  const daysInMonth = new Date(year, month, 0).getDate();
+  for (let day = 1; day <= daysInMonth; day++) {
+    const d = new Date(year, month - 1, day);
+    const key = 'cpma_' + d.toISOString().slice(0, 10);
+    const saved = JSON.parse(localStorage.getItem(key) || 'null');
+    const g = saved ? saved.ganhos.reduce((a, b) => a + b.valor, 0) : 0;
+    const e = saved ? saved.despesas.reduce((a, b) => a + b.valor, 0) : 0;
+    totalGanhos += g;
+    totalDespesas += e;
+    const rowColor = g > 0 ? 'style="background:#c8f7c5;"' : 'style="background:#f7c5c5;"';
+    rows += `<tr ${rowColor}><td>${d.toLocaleDateString()}</td><td>R$ ${g.toFixed(2)}</td><td>R$ ${e.toFixed(2)}</td><td>R$ ${(g - e).toFixed(2)}</td></tr>`;
+  }
+
+  let fixedTotal = 0,
+    extraTotal = 0;
+  fixedExpenses.forEach((f) => {
+    if (f.freq === 'mensal') fixedTotal += f.valor;
+    else if (f.freq === 'anual') fixedTotal += f.valor / 12;
+  });
+  extraExpenses.forEach((e) => {
+    if (e.tipo === 'mensal') extraTotal += e.valor;
+    else if (e.tipo === 'anual') extraTotal += e.valor / 12;
+  });
+
+  const totalDespesasComFixas = totalDespesas + fixedTotal + extraTotal;
+  summaryResult.innerHTML = `<strong>Resumo Mensal (${monthValue})</strong>
+    <table>
+      <tr><th>Data</th><th>Ganhos</th><th>Despesas</th><th>Receita</th></tr>${rows}</table>
+    <div class="totals">
+      Total Ganhos: R$ ${totalGanhos.toFixed(2)} |
+      Total Despesas: R$ ${totalDespesasComFixas.toFixed(2)} |
+      Receita Líquida: R$ ${(totalGanhos - totalDespesasComFixas).toFixed(2)}
+    </div>`;
+}
+
+// ----- Ao mudar a data carrega dados -----
+workDate.addEventListener('change', () => {
+  loadDayData(workDate.value);
+});
+workDate.value = new Date().toISOString().slice(0, 10);
+loadDayData(workDate.value);
+
+// Inicializa listas fixas e pontuais
+renderLists();
+
+</script>
+</body>
+</html>

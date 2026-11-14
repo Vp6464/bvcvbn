@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "CPMA - Controle Motorista",
+    "slug": "cpma-controle-motorista",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": { "supportsTablet": true },
+    "android": { "package": "com.cpma.controlemotorista" }
+  }
+}
